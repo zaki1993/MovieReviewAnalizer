@@ -68,8 +68,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
         int rating = Integer.valueOf(sentance.substring(0, 1));
 
-        String filteredWords = removeStopWords(sentance.substring(1));
-        filteredWords = filterString(filteredWords);
+        String filteredWords = filterString(sentance.substring(1));
         Arrays.stream(filteredWords.split(" ")).forEach(word -> calculateSentimentalScore(word, rating));
     }
 
@@ -113,7 +112,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      */
     private String filterString(String word) {
 
-        String result = word;
+        String result = removeStopWords(word);
         result = result.replaceAll(SPECIAL_CHARACTERS_REGEX,EMPTY_WORD);
         result = result.replaceAll(DOUBLE_WHITE_SPACE_REGEX, WHITE_SPACE);
         result = result.replaceAll(SINGLE_LETTER_REGEX_V1, EMPTY_WORD);
@@ -137,7 +136,10 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     @Override
     public double getReviewSentiment(String review) {
-        return 0;
+        String filteredReview = filterString(review);
+        String[] words = filteredReview.split(" ");
+        double result = Arrays.stream(words).mapToDouble(word -> reviewWords.get(word).getValue()).sum();
+        return result;
     }
 
     @Override
@@ -147,7 +149,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     @Override
     public double getWordSentiment(String word) {
-        return 0;
+        return reviewWords.get(word).getValue();
     }
 
     @Override
@@ -172,6 +174,6 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     @Override
     public boolean isStopWord(String word) {
-        return false;
+        return stopWordsSet.contains(word);
     }
 }
