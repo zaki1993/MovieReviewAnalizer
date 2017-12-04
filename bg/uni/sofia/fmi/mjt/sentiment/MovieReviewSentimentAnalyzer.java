@@ -9,12 +9,14 @@ import java.util.stream.Stream;
 
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
+
+    private static final String SINGLE_LETTER_REGEX_V1   = "\\b[\\w']{1,2}\\b";
+    private static final String SINGLE_LETTER_REGEX_V2   = "\\s{2,}";
     private static final String SPECIAL_CHARACTERS_REGEX = "\\.|,|-|`|'|;|\\?|!";
     private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
     private static final String EMPTY_WORD = "";
     private static final String WHITE_SPACE = " ";
-    private static final Map<String, String> filters = Map.ofEntries(Map.entry(SPECIAL_CHARACTERS_REGEX, EMPTY_WORD),
-                                                                     Map.entry(DOUBLE_WHITE_SPACE_REGEX, WHITE_SPACE));
+
     private Set<String> stopWordsSet;
     private Map<String, Map.Entry<Integer, Double>> reviewWords;
 
@@ -27,29 +29,30 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     /**
      * Initializes stop words pool
      * and retrieves all the stop words from given file
-     * @param stopwordsFileName
+     * @param stopWordsFileName
      * @throws IOException
      */
-    private void initStopWords(String stopwordsFileName) throws IOException {
+    private void initStopWords(String stopWordsFileName) throws IOException {
 
         this.stopWordsSet = new HashSet<>();
-        readFile(stopwordsFileName, this::addStopWord);
+        readFile(stopWordsFileName, this::addStopWord);
     }
 
     /**
      * Initializes review words pool
-     * and retireves all the review words from given file
-     * @param reviewsFileName
+     * and retrieves all the review words from given file
+     * @param reviewsFileName is filename of file with train data
      * @throws IOException
      */
     private void initReviewsWords(String reviewsFileName) throws IOException {
         this.reviewWords = new HashMap<>();
         readFile(reviewsFileName, this::parseReviewWord);
+        System.out.println(reviewWords);
     }
 
     /**
      * Adds a stop word to the pool of stop words
-     * @param word
+     * @param word is stop word
      */
     private void addStopWord(String word) {
         this.stopWordsSet.add(word);
@@ -66,10 +69,35 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
         int rating = Integer.valueOf(sentance.substring(0, 1));
 
         String filteredWords = removeStopWords(sentance.substring(1));
-        filteredWords = filterString(filteredWords, filters);
-        System.out.println(rating + " " + filteredWords);
+        filteredWords = filterString(filteredWords);
+        Arrays.stream(filteredWords.split(" ")).forEach(word -> calculateSentimentalScore(word, rating));
     }
 
+    /**
+     * Calculates the sentimental score of given word
+     * @param word
+     * @param rating
+     */
+    private void calculateSentimentalScore(String word, int rating) {
+
+        if (word.isEmpty()) {
+            return;
+        }
+        if (reviewWords.containsKey(word)) {
+            Map.Entry<Integer, Double> wordStatus = reviewWords.get(word);
+            int occurrences = wordStatus.getKey();
+            double newRating = (occurrences * wordStatus.getValue() + rating) / (occurrences + 1);
+            reviewWords.put(word, Map.entry(occurrences + 1, newRating));
+        } else {
+            reviewWords.put(word, Map.entry(1, (double) rating));
+        }
+    }
+
+    /**
+     * This method removes all the stop words from given sequence of words
+     * @param words is sequence of words
+     * @return sequence of filtered words
+     */
     private String removeStopWords(String words) {
         String result = words;
         for (String stopWord : stopWordsSet) {
@@ -78,26 +106,19 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
         return result;
     }
 
-    private String filterString(String word, Map<String, String> filters) {
-        String result = word;
-        for (Map.Entry<String, String> filter : filters.entrySet()) {
-            result = filterString(result, filter.getKey(), filter.getValue());
-        }
-        result = result.replaceAll("\\b[\\w']{1,2}\\b", "");
-        result = result.replaceAll("\\s{2,}", " ");
-        return result.trim();
-    }
-
     /**
-     * Filter string with regex
+     * Use regexs in particular order to filter the entry data
      * @param word
-     * @param regex
-     * @param replacement
      * @return
      */
-    private String filterString(String word, String regex, String replacement) {
+    private String filterString(String word) {
 
-        return word.replaceAll(regex, replacement);
+        String result = word;
+        result = result.replaceAll(SPECIAL_CHARACTERS_REGEX,EMPTY_WORD);
+        result = result.replaceAll(DOUBLE_WHITE_SPACE_REGEX, WHITE_SPACE);
+        result = result.replaceAll(SINGLE_LETTER_REGEX_V1, EMPTY_WORD);
+        result = result.replaceAll(SINGLE_LETTER_REGEX_V2, WHITE_SPACE);
+        return result.trim();
     }
 
     /**
