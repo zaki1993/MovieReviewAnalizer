@@ -1,11 +1,18 @@
 package bg.uni.sofia.fmi.mjt.sentiment;
 
+import bg.uni.sofia.fmi.mjt.sentiment.comparator.MostFrequentWordsComparator;
+
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static java.util.Map.Entry.comparingByValue;
 
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
@@ -16,7 +23,6 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
     private static final String EMPTY_WORD = "";
     private static final String WHITE_SPACE = " ";
-
     private Set<String> stopWordsSet;
     private Map<String, Map.Entry<Integer, Double>> reviewWords;
 
@@ -138,13 +144,28 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     public double getReviewSentiment(String review) {
         String filteredReview = filterString(review);
         String[] words = filteredReview.split(" ");
-        double result = Arrays.stream(words).mapToDouble(word -> reviewWords.get(word).getValue()).sum();
-        return result;
+        double sentiment = Arrays.stream(words).mapToDouble(this::getWordSentiment).sum() / words.length;
+        Arrays.stream(words).forEach(word -> calculateSentimentalScore(word, (int) sentiment)); // TODO cast ?
+        return sentiment;
     }
 
     @Override
     public String getReviewSentimentAsName(String review) {
-        return null;
+
+        double reviewSentiment = getReviewSentiment(review);
+        String result;
+        if (reviewSentiment >= 0.0 && reviewSentiment < 1.0) {
+            result = Sentiment.NEGATIVE.toString();
+        } else if (reviewSentiment >= 1.0 && reviewSentiment < 2.0) {
+            result = Sentiment.SOMEWHAT_NEGATIVE.toString();
+        } else if (reviewSentiment == 2.0) {
+            result = Sentiment.NEUTRAL.toString();
+        } else if (reviewSentiment > 2.0 && reviewSentiment <= 3.0) {
+            result = Sentiment.SOMEWHAT_POSITIVE.toString();
+        } else {
+            result = Sentiment.POSITIVE.toString(); //  if (reviewSentiment > 3.0 && reviewSentiment <= 4.0)
+        }
+        return result;
     }
 
     @Override
@@ -159,17 +180,27 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     @Override
     public Collection<String> getMostPositiveWords(int n) {
-        return null;
+        return reviewWords.entrySet()
+                .stream()
+                .sorted(Comparator.comparing(reviewEntry -> reviewEntry.getValue().getValue())) // TODO reverse
+                .limit(n)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
     }
 
     @Override
     public Collection<String> getMostNegativeWords(int n) {
-        return null;
+        return reviewWords.entrySet()
+                          .stream()
+                          .sorted(Comparator.comparing(reviewEntry -> reviewEntry.getValue().getValue()))
+                          .limit(n)
+                          .map(Map.Entry::getKey)
+                          .collect(Collectors.toSet());
     }
 
     @Override
     public int getSentimentDictionarySize() {
-        return 0;
+        return this.reviewWords.size();
     }
 
     @Override
