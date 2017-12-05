@@ -1,22 +1,18 @@
 package bg.uni.sofia.fmi.mjt;
 
 import bg.uni.sofia.fmi.mjt.sentiment.MovieReviewSentimentAnalyzer;
+import bg.uni.sofia.fmi.mjt.sentiment.Sentiment;
 import org.junit.Test;
 
 import java.io.IOException;
-import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 public class MovieReviewSentimentAnalyzerTest {
 
     private static MovieReviewSentimentAnalyzer analyzer;
 
-    // before constructor
     static {
         try {
             analyzer = new MovieReviewSentimentAnalyzer("src/bg/uni/sofia/fmi/mjt/resources/movieReviews.txt",
@@ -95,11 +91,11 @@ public class MovieReviewSentimentAnalyzerTest {
 
     @Test
     public void returnsCorrectSentimentNameIfWordIsKnown() {
-        assertEquals("negative", analyzer.getReviewSentimentAsName("throes"));
-        assertEquals("somewhat negative", analyzer.getReviewSentimentAsName("dreadful"));
-        assertEquals("neutral", analyzer.getReviewSentimentAsName("pollution"));
-        assertEquals("somewhat positive", analyzer.getReviewSentimentAsName("chronicle"));
-        assertEquals("positive", analyzer.getReviewSentimentAsName("spontaneous"));
+        assertEquals(Sentiment.NEGATIVE.toString(), analyzer.getReviewSentimentAsName("throes"));
+        assertEquals(Sentiment.SOMEWHAT_NEGATIVE.toString(), analyzer.getReviewSentimentAsName("dreadful"));
+        assertEquals(Sentiment.NEUTRAL.toString(), analyzer.getReviewSentimentAsName("pollution"));
+        assertEquals(Sentiment.SOMEWHAT_POSITIVE.toString(), analyzer.getReviewSentimentAsName("chronicle"));
+        assertEquals(Sentiment.POSITIVE.toString(), analyzer.getReviewSentimentAsName("spontaneous"));
     }
 
     @Test
