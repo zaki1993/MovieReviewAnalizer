@@ -16,12 +16,7 @@ import static java.util.Map.Entry.comparingByValue;
 
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
-
-    private static final String SINGLE_LETTER_REGEX_V1   = "\\b[\\w']{1,2}\\b";
-    private static final String SINGLE_LETTER_REGEX_V2   = "\\s{2,}";
-    private static final String SPECIAL_CHARACTERS_REGEX = "\\.|,|-|`|'|;|\\?|!";
     private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
-    private static final String EMPTY_WORD = "";
     private static final String WHITE_SPACE = " ";
     private Set<String> stopWordsSet;
     private Map<String, Map.Entry<Integer, Double>> reviewWords;
@@ -75,7 +70,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
         int rating = Integer.valueOf(sentance.substring(0, 1));
 
         String filteredWords = filterString(sentance.substring(1));
-        Arrays.stream(filteredWords.split(" ")).forEach(word -> calculateSentimentalScore(word, rating));
+        Arrays.stream(filteredWords.split(" ")).forEach(word -> calculateSentimentalScore(word.toLowerCase(), rating));
     }
 
     /**
@@ -106,23 +101,25 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     private String removeStopWords(String words) {
         String result = words;
         for (String stopWord : stopWordsSet) {
-            result = result.replace(stopWord, EMPTY_WORD);
+            // build regex for the stopWord
+            // \\b gives you the word boundaries
+            // \\s* sops up any white space on either side of the word being removed
+            // (?i) is to match case ignore cases
+            String regex = "\\s*\\b(?i)" + stopWord + "\\b\\s*";
+            result = result.replaceAll(regex, WHITE_SPACE);
         }
         return result;
     }
 
     /**
      * Use regexs in particular order to filter the entry data
-     * @param word
+     * @param sequence
      * @return
      */
-    private String filterString(String word) {
+    private String filterString(String sequence) {
 
-        String result = removeStopWords(word);
-        result = result.replaceAll(SPECIAL_CHARACTERS_REGEX,EMPTY_WORD);
+        String result = removeStopWords(sequence);
         result = result.replaceAll(DOUBLE_WHITE_SPACE_REGEX, WHITE_SPACE);
-        result = result.replaceAll(SINGLE_LETTER_REGEX_V1, EMPTY_WORD);
-        result = result.replaceAll(SINGLE_LETTER_REGEX_V2, WHITE_SPACE);
         return result.trim();
     }
 
@@ -142,6 +139,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     @Override
     public double getReviewSentiment(String review) {
+
         String filteredReview = filterString(review);
         String[] words = filteredReview.split(" ");
         double sentiment = Arrays.stream(words).mapToDouble(this::getWordSentiment).sum() / words.length;
@@ -168,43 +166,99 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
         return result;
     }
 
+    /**
+     * @param word
+     * @return sentimental score for word
+     */
     @Override
     public double getWordSentiment(String word) {
-        return reviewWords.get(word).getValue();
+
+        double result = 0.0;
+        if (reviewWords.containsKey(word)) {
+            result = reviewWords.get(word).getValue();
+        } else {
+
+        }
+        return result;
     }
 
+    /**
+     * Sort words by occurrences
+     * @param n
+     * @return collection of the first N most occurred words
+     */
     @Override
     public Collection<String> getMostFrequentWords(int n) {
-        return null;
-    }
 
-    @Override
-    public Collection<String> getMostPositiveWords(int n) {
-        return reviewWords.entrySet()
-                .stream()
-                .sorted(Comparator.comparing(reviewEntry -> reviewEntry.getValue().getValue())) // TODO reverse
-                .limit(n)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
-    public Collection<String> getMostNegativeWords(int n) {
+        // provide argument type, because of the weakness in the compiler's type inferencing mechanism
+        // when not using method reference
         return reviewWords.entrySet()
                           .stream()
-                          .sorted(Comparator.comparing(reviewEntry -> reviewEntry.getValue().getValue()))
+                          .sorted(Comparator.comparingInt((Map.Entry<String, Map.Entry<Integer, Double>> reviewEntry) -> reviewEntry.getValue().getKey())
+                          .reversed())
                           .limit(n)
                           .map(Map.Entry::getKey)
                           .collect(Collectors.toSet());
     }
 
+    /**
+     * Sort words by rating in decreasing order
+     * @param n
+     * @return collection of first N most rated words
+     */
+    @Override
+    public Collection<String> getMostPositiveWords(int n) {
+
+        // provide argument type, because of the weakness in the compiler's type inferencing mechanism
+        // when not using method reference
+        return reviewWords.entrySet()
+                          .stream()
+                          .sorted(Comparator.comparingDouble((Map.Entry<String, Map.Entry<Integer, Double>> reviewEntry) -> reviewEntry.getValue().getValue())
+                          .reversed())
+                          .limit(n)
+                          .map(Map.Entry::getKey)
+                          .collect(Collectors.toSet());
+    }
+
+    /**
+     * Sort words by rating in increasing order
+     * @param n
+     * @return collection of first N most lowly rated words
+     */
+    @Override
+    public Collection<String> getMostNegativeWords(int n) {
+
+        return reviewWords.entrySet()
+                          .stream()
+                          .sorted(Comparator.comparingDouble( reviewEntry -> reviewEntry.getValue().getValue()))
+                          .limit(n)
+                          .map(Map.Entry::getKey)
+                          .collect(Collectors.toSet());
+    }
+
+    /**
+     * @return the size of the reviewed words
+     */
     @Override
     public int getSentimentDictionarySize() {
         return this.reviewWords.size();
     }
 
+    /**
+     * @param word
+     * @return true of word is stop word, false otherwise
+     */
     @Override
     public boolean isStopWord(String word) {
-        return stopWordsSet.contains(word);
+        return findStopWord(word);
+    }
+
+    /**
+     * Compares with equalsIgnoreCase if the word is stop word
+     * @param word
+     * @return
+     */
+    private boolean findStopWord(String word) {
+        return stopWordsSet.stream().anyMatch(stopWord -> stopWord.equalsIgnoreCase(word));
     }
 }
