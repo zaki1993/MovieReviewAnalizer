@@ -1,25 +1,21 @@
 package bg.uni.sofia.fmi.mjt.sentiment;
 
-import bg.uni.sofia.fmi.mjt.sentiment.comparator.MostFrequentWordsComparator;
-
 import java.io.IOException;
-import java.io.Serializable;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
-import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
-
-import static java.util.Map.Entry.comparingByValue;
 
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
     private static final String WHITE_SPACE = " ";
     private Set<String> stopWordsSet;
-    private Map<String, Map.Entry<Integer, Double>> reviewWords;
+    private CaseInSensitiveMap reviewWords;
 
     public MovieReviewSentimentAnalyzer(String reviewsFileName, String stopWordsFileName) throws IOException {
 
@@ -46,9 +42,8 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      * @throws IOException
      */
     private void initReviewsWords(String reviewsFileName) throws IOException {
-        this.reviewWords = new HashMap<>();
+        this.reviewWords = new CaseInSensitiveMap();
         readFile(reviewsFileName, this::parseReviewWord);
-        System.out.println(reviewWords);
     }
 
     /**
@@ -63,14 +58,15 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      * Receives string with rating and comment
      * and depending if the words in the comment are good or bad
      * inserts them into the review words pool
-     * @param sentance
+     * @param sequence
      */
-    private void parseReviewWord(String sentance) {
+    private void parseReviewWord(String sequence) {
 
-        int rating = Integer.valueOf(sentance.substring(0, 1));
+        int rating = Integer.valueOf(sequence.substring(0, 1));
 
-        String filteredWords = filterString(sentance.substring(1));
-        Arrays.stream(filteredWords.split(" ")).forEach(word -> calculateSentimentalScore(word.toLowerCase(), rating));
+        String filteredWords = filterString(sequence.substring(1));
+        Arrays.stream(filteredWords.split(" "))
+              .forEach(word -> calculateSentimentalScore(word, rating));
     }
 
     /**
@@ -142,9 +138,14 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
         String filteredReview = filterString(review);
         String[] words = filteredReview.split(" ");
-        double sentiment = Arrays.stream(words).mapToDouble(this::getWordSentiment).sum() / words.length;
-        Arrays.stream(words).forEach(word -> calculateSentimentalScore(word, (int) sentiment)); // TODO cast ?
-        return sentiment;
+
+        // wrap the stream into supplier so we can reuse it
+        Supplier<DoubleStream> sup = () -> Arrays.stream(words)
+                                                 .filter(reviewWords::containsKey)
+                                                 .mapToDouble(this::getWordSentiment);
+        double sum = sup.get().sum();
+        long count = sup.get().count();
+        return count == 0 ? -1.0 : (sum / count);
     }
 
     @Override
@@ -160,8 +161,10 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
             result = Sentiment.NEUTRAL.toString();
         } else if (reviewSentiment > 2.0 && reviewSentiment <= 3.0) {
             result = Sentiment.SOMEWHAT_POSITIVE.toString();
+        } else if (reviewSentiment > 3.0 && reviewSentiment <= 4.0){
+            result = Sentiment.POSITIVE.toString();
         } else {
-            result = Sentiment.POSITIVE.toString(); //  if (reviewSentiment > 3.0 && reviewSentiment <= 4.0)
+            result = "unknown";
         }
         return result;
     }
@@ -173,11 +176,11 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     @Override
     public double getWordSentiment(String word) {
 
-        double result = 0.0;
+        double result;
         if (reviewWords.containsKey(word)) {
             result = reviewWords.get(word).getValue();
         } else {
-
+            result = -1.0;
         }
         return result;
     }

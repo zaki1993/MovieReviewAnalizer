@@ -20,7 +20,7 @@ public interface SentimentAnalyzer {
     String getReviewSentimentAsName(String review);
 
     /**
-     * @param word
+     * @param word is a word
      * @return the review sentiment of the word as a floating-point number in the
      *         interval [0.0, 4.0] if known, and -1.0 if unknown
      */
@@ -34,12 +34,12 @@ public interface SentimentAnalyzer {
     /**
      * Returns a collection of the n most positive words in the reviews
      */
-    public Collection<String> getMostPositiveWords(int n);
+    Collection<String> getMostPositiveWords(int n);
 
     /**
      * Returns a collection of the n most negative words in the reviews
      */
-    public Collection<String> getMostNegativeWords(int n);
+    Collection<String> getMostNegativeWords(int n);
 
     /**
      * Returns the total number of words with known sentiment score
