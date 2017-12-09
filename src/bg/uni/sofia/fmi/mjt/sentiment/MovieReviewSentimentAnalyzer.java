@@ -13,6 +13,7 @@ import java.util.stream.Stream;
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
     private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
+    private static final String VALID_WORD_REGEX = "[a-zA-Z0-9]*";
     private static final String WHITE_SPACE = " ";
     private Set<String> stopWordsSet;
     private CaseInSensitiveMap reviewWords;
@@ -76,7 +77,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      */
     private void calculateSentimentalScore(String word, int rating) {
 
-        if (word.isEmpty()) {
+        if (word.isEmpty() || !word.matches(VALID_WORD_REGEX)) {
             return;
         }
         if (reviewWords.containsKey(word)) {
@@ -233,7 +234,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
         return reviewWords.entrySet()
                           .stream()
-                          .sorted(Comparator.comparingDouble( reviewEntry -> reviewEntry.getValue().getValue()))
+                          .sorted(Comparator.comparingDouble(reviewEntry -> reviewEntry.getValue().getValue()))
                           .limit(n)
                           .map(Map.Entry::getKey)
                           .collect(Collectors.toSet());
@@ -262,6 +263,6 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      * @return
      */
     private boolean findStopWord(String word) {
-        return stopWordsSet.stream().anyMatch(stopWord -> stopWord.equalsIgnoreCase(word));
+        return stopWordsSet.stream().anyMatch(word::equalsIgnoreCase);
     }
 }

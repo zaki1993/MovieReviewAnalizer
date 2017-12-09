@@ -7,7 +7,9 @@ import org.junit.Test;
 import java.io.IOException;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static junit.framework.TestCase.assertTrue;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class MovieReviewSentimentAnalyzerTest {
 
@@ -49,7 +51,7 @@ public class MovieReviewSentimentAnalyzerTest {
 
     @Test
     public void getsReviewOfSequenceWithMixedSymbols() {
-        assertEquals(2.1, analyzer.getReviewSentiment("The ' a yours proves is .,"), 0.1);
+        assertEquals(2.4, analyzer.getReviewSentiment("The ' a yours proves is .,"), 0.1);
     }
 
     @Test
@@ -101,7 +103,7 @@ public class MovieReviewSentimentAnalyzerTest {
     @Test
     public void returnsCorrectDictionarySize() {
         // better test is to remove all the stop words and then distinct all the words and count their size
-        assertEquals(16389, analyzer.getSentimentDictionarySize());
+        assertEquals(14588, analyzer.getSentimentDictionarySize());
     }
 
     @Test
@@ -112,18 +114,18 @@ public class MovieReviewSentimentAnalyzerTest {
 
     @Test
     public void returnsMostNegativeWordsAllWords() {
-        assertEquals(16389, analyzer.getMostNegativeWords(16389).size());
+        assertEquals(14588, analyzer.getMostNegativeWords(14588).size());
     }
 
     @Test
     public void returnsMostFrequentWords() {
-        Set<String> frequentWords = Set.of("movie", "film", ",", "'s", ".");
+        Set<String> frequentWords = Set.of("movie", "like", "one", "film", "story");
         assertEquals(frequentWords, analyzer.getMostFrequentWords(5));
     }
 
     @Test
     public void returnsMostFrequentWordsAllWords() {
-        assertEquals(16389, analyzer.getMostFrequentWords(16389).size());
+        assertEquals(14588, analyzer.getMostFrequentWords(14588).size());
     }
 
     @Test
@@ -134,6 +136,6 @@ public class MovieReviewSentimentAnalyzerTest {
 
     @Test
     public void returnsMostPositiveWordsAllWords() {
-        assertEquals(16389, analyzer.getMostPositiveWords(16389).size());
+        assertEquals(14588, analyzer.getMostPositiveWords(14588).size());
     }
 }
