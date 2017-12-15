@@ -6,15 +6,15 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.DoubleStream;
 import java.util.stream.Stream;
 
 public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
-    private static final String DOUBLE_WHITE_SPACE_REGEX = "\\s+";
     private static final String VALID_WORD_REGEX = "[a-zA-Z0-9]*";
-    private static final String WHITE_SPACE = " ";
     private Set<String> stopWordsSet;
     private CaseInSensitiveMap reviewWords;
 
@@ -65,9 +65,14 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
 
         int rating = Integer.valueOf(sequence.substring(0, 1));
 
-        String filteredWords = filterString(sequence.substring(1));
-        Arrays.stream(filteredWords.split(" "))
-              .forEach(word -> calculateSentimentalScore(word, rating));
+        Pattern pattern = Pattern.compile(VALID_WORD_REGEX);
+        Matcher matcher = pattern.matcher(sequence.substring(1));
+        while (matcher.find()) {
+            String word = matcher.group();
+            if (!word.trim().isEmpty() && !isStopWord(word)) {
+                calculateSentimentalScore(word, rating);
+            }
+        }
     }
 
     /**
@@ -77,9 +82,6 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      */
     private void calculateSentimentalScore(String word, int rating) {
 
-        if (word.isEmpty() || !word.matches(VALID_WORD_REGEX)) {
-            return;
-        }
         if (reviewWords.containsKey(word)) {
             Map.Entry<Integer, Double> wordStatus = reviewWords.get(word);
             int occurrences = wordStatus.getKey();
@@ -88,36 +90,6 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
         } else {
             reviewWords.put(word, Map.entry(1, (double) rating));
         }
-    }
-
-    /**
-     * This method removes all the stop words from given sequence of words
-     * @param words is sequence of words
-     * @return sequence of filtered words
-     */
-    private String removeStopWords(String words) {
-        String result = words;
-        for (String stopWord : stopWordsSet) {
-            // build regex for the stopWord
-            // \\b gives you the word boundaries
-            // \\s* sops up any white space on either side of the word being removed
-            // (?i) is to match case ignore cases
-            String regex = "\\s*\\b(?i)" + stopWord + "\\b\\s*";
-            result = result.replaceAll(regex, WHITE_SPACE);
-        }
-        return result;
-    }
-
-    /**
-     * Use regexs in particular order to filter the entry data
-     * @param sequence
-     * @return
-     */
-    private String filterString(String sequence) {
-
-        String result = removeStopWords(sequence);
-        result = result.replaceAll(DOUBLE_WHITE_SPACE_REGEX, WHITE_SPACE);
-        return result.trim();
     }
 
     /**
@@ -137,16 +109,18 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     @Override
     public double getReviewSentiment(String review) {
 
-        String filteredReview = filterString(review);
-        String[] words = filteredReview.split(" ");
-
-        // wrap the stream into supplier so we can reuse it
-        Supplier<DoubleStream> sup = () -> Arrays.stream(words)
-                                                 .filter(reviewWords::containsKey)
-                                                 .mapToDouble(this::getWordSentiment);
-        double sum = sup.get().sum();
-        long count = sup.get().count();
-        return count == 0 ? -1.0 : (sum / count);
+        Pattern pattern = Pattern.compile(VALID_WORD_REGEX);
+        Matcher matcher = pattern.matcher(review);
+        int counter = 0;
+        double result = 0.0;
+        while (matcher.find()) {
+            String word = matcher.group();
+            if (!word.trim().isEmpty() && !isStopWord(word) && reviewWords.containsKey(word)) {
+                counter++;
+                result += reviewWords.get(word).getValue();
+            }
+        }
+        return counter == 0 ? -1.0 : result / counter;
     }
 
     @Override
@@ -171,6 +145,8 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
     }
 
     /**
+     * This method takes sequence and parses it like it is
+     * It does not remove separators
      * @param word
      * @return sentimental score for word
      */
@@ -254,7 +230,7 @@ public class MovieReviewSentimentAnalyzer implements SentimentAnalyzer {
      */
     @Override
     public boolean isStopWord(String word) {
-        return findStopWord(word);
+        return findStopWord(word.trim());
     }
 
     /**

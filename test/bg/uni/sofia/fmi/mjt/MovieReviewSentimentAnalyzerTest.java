@@ -103,12 +103,12 @@ public class MovieReviewSentimentAnalyzerTest {
     @Test
     public void returnsCorrectDictionarySize() {
         // better test is to remove all the stop words and then distinct all the words and count their size
-        assertEquals(14588, analyzer.getSentimentDictionarySize());
+        assertEquals(15079, analyzer.getSentimentDictionarySize());
     }
 
     @Test
     public void returnsMostNegativeWords() {
-        Set<String> frequentWords = Set.of("resume", "turd", "claptrap", "L", "pics");
+        Set<String> frequentWords = Set.of("resume", "turd", "claptrap", "Whiffle", "pics");
         assertEquals(frequentWords, analyzer.getMostNegativeWords(5));
     }
 
@@ -119,7 +119,7 @@ public class MovieReviewSentimentAnalyzerTest {
 
     @Test
     public void returnsMostFrequentWords() {
-        Set<String> frequentWords = Set.of("movie", "like", "one", "film", "story");
+        Set<String> frequentWords = Set.of("s", "movie", "t", "film", "n");
         assertEquals(frequentWords, analyzer.getMostFrequentWords(5));
     }
 
